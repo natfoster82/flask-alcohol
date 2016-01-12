@@ -1,4 +1,4 @@
-from flask import request, jsonify, make_response, current_app, Response, get_flashed_messages, g
+from flask import request, jsonify, make_response, current_app, Response, get_flashed_messages, g, flash
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.properties import ColumnProperty
@@ -338,6 +338,7 @@ class APIMixin(Router):
         cls.__infos__ = {}
         cls.__metas__ = {}
         cls.__defaultfields__ = set([])
+        cls.__indexedfields__ = set([])
 
         # go through all the members of the class and add filters for columns with default filters,
         # setters for all those with a @setter decorator,
@@ -356,6 +357,8 @@ class APIMixin(Router):
                         api_info = cls.__columndefaults__.copy()
                         api_info.update(value.comparator.info)
                         indexed = bool(value.comparator.primary_key or value.comparator.index)
+                        if indexed:
+                            cls.__indexedfields__.add(name)
                         editable = api_info['set_by'] == 'json'
                     else:
                         # it is a relationship
@@ -460,21 +463,38 @@ class APIMixin(Router):
 
     @classmethod
     def _get_results(cls, route='index'):
-        col_name = request.args.get('sort') or cls.__sort__
-        order_by = None
-        if col_name:
-            if col_name[0] == '-':
-                col_name = col_name[1:]
-                desc = True
-            else:
-                desc = False
-            col = getattr(cls, col_name, None)
-            if col and (col.comparator.primary_key or col.comparator.index):
-                order_by = col
-                if desc:
-                    order_by = col.desc()
-            else:
-                return jsonify(messages=api_messages()), 400
+        query = cls.query
+        for field in cls.__indexedfields__:
+            filter_string = request.args.get(field)
+            if filter_string:
+                column = getattr(cls, field)
+                type_str = str(column.type)
+                if type_str == 'VARCHAR' or type_str == 'TEXT':
+                    filter_string = filter_string.replace('_', '__').replace('*', '%').replace('?', '_')
+                    filter_string = '%{0}%'.format(filter_string)
+                    query = query.filter(column.ilike(filter_string))
+                elif type_str == 'INTEGER':
+                    query = query.filter(column == int(filter_string))
+
+        sort_rules = request.args.get('sort') or cls.__sort__
+        if sort_rules:
+            rules = sort_rules.split(',')
+            for rule in rules:
+                if rule[0] == '-':
+                    col_name = rule[1:]
+                    desc = True
+                else:
+                    col_name = rule
+                    desc = False
+                col = getattr(cls, col_name, None)
+                if col and (col.comparator.primary_key or col.comparator.index):
+                    order_by = col
+                    if desc:
+                        order_by = col.desc()
+                else:
+                    return jsonify(messages=api_messages()), 400
+
+                query = query.order_by(order_by)
 
         per_page = request.args.get('per_page')
         if per_page is None:
@@ -482,12 +502,7 @@ class APIMixin(Router):
         elif cls.__maxresults__ and int(per_page) > cls.__maxresults__:
             return jsonify(messages=api_messages()), 400
 
-        # add request.args filtering here as well
-        # what happens when the query adjuster adds another order_by clause?
-        # does order matter? Looks like the first order_by statement takes precedence
-        # seems fine, but is this the behavior we want?
-
-        query = cls.query.order_by(order_by)
+        # adjust the query further before pagination
         query = cls._adjust_query(query, route)
 
         if per_page is None:
