@@ -503,6 +503,7 @@ class APIMixin(Router):
             return jsonify(messages=api_messages()), 400
 
         # adjust the query further before pagination
+        # do i want to joinedload included relationships?
         query = cls._adjust_query(query, route)
 
         if per_page is None:
@@ -587,7 +588,11 @@ class APIMixin(Router):
         if name in self.__getters__:
             func_name = self.__getters__[name]
             func = getattr(self, func_name)
-            return func(name)
+            try:
+                field_value = func(name)
+            except TypeError:
+                field_value = func()
+            return field_value
         return self._auto_get(name)
 
     def _auto_update(self, mapper=None):
