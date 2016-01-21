@@ -470,7 +470,7 @@ class APIMixin(Router):
                 column = getattr(cls, field)
                 type_str = str(column.type)
                 if type_str == 'VARCHAR' or type_str == 'TEXT':
-                    filter_string = filter_string.replace('_', '__').replace('*', '%').replace('?', '_')
+                    filter_string = filter_string.replace('_', '__').replace('*', 'as_').replace('?', '_')
                     filter_string = '%{0}%'.format(filter_string)
                     query = query.filter(column.ilike(filter_string))
                 elif type_str == 'INTEGER':
@@ -560,7 +560,7 @@ class APIMixin(Router):
             value = [x.as_dict(is_related=True) for x in value]
         else:
             try:
-                value = value.as_dict()
+                value = value.as_dict(is_related=True)
             except AttributeError:
                 pass
         return value
