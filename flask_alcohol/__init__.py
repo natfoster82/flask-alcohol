@@ -604,8 +604,8 @@ class APIMixin(Router):
             api_info = cls._get_api_info(col.name)
             set_by = api_info['set_by']
             if set_by == 'json':
-                if col.name in request.json:
-                    val = request.json.get(col.name)
+                if col.name in g.fields:
+                    val = g.fields.get(col.name)
                     self._set_field_value(col.name, val)
             elif set_by == 'url':
                 if col.name in request.view_args:
@@ -647,15 +647,16 @@ class APIMixin(Router):
     @classmethod
     @route('', methods=['POST'], is_auto=True)
     def post(cls, **kwargs):
+        g.fields = request.json or request.form
         if not cls._authorize('post', resource=None):
             return jsonify(messages=api_messages()), 403
         obj = cls()
         obj._auto_update()
+        cls._before_return('post', obj)
         if getattr(g, 'failed_validation', False):
             return jsonify(messages=api_messages()), 400
         session = cls._get_sql_session()
         session.add(obj)
-        cls._before_return('post', obj)
         session.commit()
         response = jsonify(obj.as_dict())
         response.status_code = 201
@@ -666,16 +667,17 @@ class APIMixin(Router):
     @route('/<identifier>', methods=['PUT'], is_auto=True)
     def put(cls, **kwargs):
         # pragmatic put method that does not require the whole object to be sent back
+        g.fields = request.json or request.form
         obj = cls._get_obj_by_id(kwargs['identifier'], 'put')
         if obj is None:
             return jsonify(messages=api_messages()), 404
         if not cls._authorize('put', resource=obj):
             return jsonify(messages=api_messages()), 403
         obj._auto_update()
+        cls._before_return('put', obj)
         if getattr(g, 'failed_validation', False):
             return jsonify(messages=api_messages()), 400
         session = cls._get_sql_session()
-        cls._before_return('put', obj)
         session.commit()
         return jsonify(obj.as_dict())
 
