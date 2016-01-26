@@ -4,3 +4,4 @@
 /logs/
 /.idea/
 /flask_alcohol.egg-info
+/flask_alcohol/__pycache__
