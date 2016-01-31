@@ -12,7 +12,7 @@ import re
 def route(rule, **options):
     """
     A decorator that is used to define custom routes for methods in
-    FlaskView subclasses. The format is exactly the same as Flask's
+    Router subclasses. The format is exactly the same as Flask's
     `@app.route` decorator except that it supports an is_auto kwarg that
     APIMixin uses for autoroutes.
     """

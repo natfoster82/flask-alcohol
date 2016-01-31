@@ -3,5 +3,9 @@
 /lib/
 /logs/
 /.idea/
+/build/
+/dist/
+/example_env/
 /flask_alcohol.egg-info
 /flask_alcohol/__pycache__
+/flask_alcohol/example_app/example_env/
