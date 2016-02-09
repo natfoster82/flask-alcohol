@@ -469,11 +469,11 @@ class APIMixin(Router):
             if filter_string:
                 column = getattr(cls, field)
                 type_str = str(column.type)
-                if type_str == 'VARCHAR' or type_str == 'TEXT':
+                if type_str.startswith('VARCHAR') or type_str.startswith('TEXT'):
                     filter_string = filter_string.replace('_', '__').replace('*', 'as_').replace('?', '_')
                     filter_string = '%{0}%'.format(filter_string)
                     query = query.filter(column.ilike(filter_string))
-                elif type_str == 'INTEGER':
+                elif type_str.startswith('INTEGER'):
                     query = query.filter(column == int(filter_string))
 
         sort_rules = request.args.get('sort') or cls.__sort__
