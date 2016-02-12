@@ -629,6 +629,8 @@ class APIMixin(Router):
             return jsonify(messages=api_messages()), 403
         objects, total, has_next = cls._get_results()
         cls._before_return('index')
+        if getattr(g, 'failed_validation', False):
+            return jsonify(messages=api_messages()), 400
         return jsonify(results=[x.as_dict() for x in objects],
                        total=total,
                        has_next=has_next)
@@ -642,6 +644,8 @@ class APIMixin(Router):
         if not cls._authorize('get', resource=obj):
             return jsonify(messages=api_messages()), 403
         cls._before_return('get', obj)
+        if getattr(g, 'failed_validation', False):
+            return jsonify(messages=api_messages()), 400
         return jsonify(obj.as_dict())
 
     @classmethod
@@ -689,9 +693,11 @@ class APIMixin(Router):
             return jsonify(messages=api_messages()), 404
         if not cls._authorize('delete', resource=obj):
             return jsonify(messages=api_messages()), 403
+        cls._before_return('delete', obj)
+        if getattr(g, 'failed_validation', False):
+            return jsonify(messages=api_messages()), 400
         session = cls._get_sql_session()
         session.delete(obj)
-        cls._before_return('delete', obj)
         session.commit()
         return jsonify(), 204
 
