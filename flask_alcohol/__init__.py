@@ -367,19 +367,18 @@ class APIMixin(Router):
                         indexed = False
                         editable = False
 
-                    if api_info['public']:
-                        cls.__infos__[name] = api_info
-                        if not api_info['defer']:
-                            cls.__defaultfields__.add(name)
-                        # make the meta
-                        meta_dict = {
-                            'indexed': indexed,
-                            'editable': editable,
-                        }
-                        if editable:
-                            meta_dict['input_type'] = cls._predict_input_type(api_info, value.comparator)
-                            meta_dict['required'] = not value.comparator.nullable
-                        cls.__metas__[name] = meta_dict
+                    cls.__infos__[name] = api_info
+                    if not api_info['defer']:
+                        cls.__defaultfields__.add(name)
+                    # make the meta
+                    meta_dict = {
+                        'indexed': indexed,
+                        'editable': editable,
+                    }
+                    if editable:
+                        meta_dict['input_type'] = cls._predict_input_type(api_info, value.comparator)
+                        meta_dict['required'] = not value.comparator.nullable
+                    cls.__metas__[name] = meta_dict
 
                 elif hasattr(value, '_extra_cache'):
                     info = value.__dict__.pop('_extra_cache')
