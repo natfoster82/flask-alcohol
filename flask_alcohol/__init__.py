@@ -467,13 +467,11 @@ class APIMixin(Router):
             filter_string = request.args.get(field)
             if filter_string:
                 column = getattr(cls, field)
-                type_str = str(column.type)
-                if type_str.startswith('VARCHAR') or type_str.startswith('TEXT'):
-                    filter_string = filter_string.replace('_', '__').replace('*', 'as_').replace('?', '_')
-                    filter_string = '%{0}%'.format(filter_string)
-                    query = query.filter(column.ilike(filter_string))
-                elif type_str.startswith('INTEGER'):
-                    query = query.filter(column == int(filter_string))
+                filter_list = filter_string.split(',')
+                if len(filter_list) > 1:
+                    query = query.filter(column.in_(filter_list))
+                else:
+                    query = query.filter(column == filter_string)
 
         sort_rules = request.args.get('sort') or cls.__sort__
         if sort_rules:
