@@ -368,7 +368,7 @@ class APIMixin(Router):
                         editable = False
 
                     cls.__infos__[name] = api_info
-                    if not api_info['defer']:
+                    if api_info['public'] and not api_info['defer']:
                         cls.__defaultfields__.add(name)
                     # make the meta
                     meta_dict = {
