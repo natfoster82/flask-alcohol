@@ -520,10 +520,7 @@ class APIMixin(Router):
     # these definitely should be classmethods, i think, but the decorated authorisers and adjusters should be static
     @classmethod
     def _authorize(cls, route_name, resource=None):
-        try:
-            func_names = cls.__security__[route_name]
-        except KeyError:
-            func_names = []
+        func_names = cls.__security__.get(route_name) or []
         for func_name in func_names:
             check = getattr(cls, func_name)
             if not check(resource):
@@ -532,23 +529,17 @@ class APIMixin(Router):
 
     @classmethod
     def _before_return(cls, route_name, resource=None):
-        try:
-            befores = cls.__beforereturns__[route_name]
-            for before in befores:
-                before_func = getattr(cls, before)
-                before_func(resource)
-        except KeyError:
-            pass
+        befores = cls.__beforereturns__.get(route_name) or []
+        for before in befores:
+            before_func = getattr(cls, before)
+            before_func(resource)
 
     @classmethod
     def _adjust_query(cls, query, route):
-        try:
-            query_adjusters = cls.__adjusters__[route]
-            for adjuster in query_adjusters:
-                adjuster_func = getattr(cls, adjuster)
-                query = adjuster_func(query)
-        except KeyError:
-            pass
+        query_adjusters = cls.__adjusters__.get(route) or []
+        for adjuster in query_adjusters:
+            adjuster_func = getattr(cls, adjuster)
+            query = adjuster_func(query)
         return query
 
     def _auto_get(self, name):
