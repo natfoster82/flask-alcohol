@@ -381,7 +381,7 @@ class APIMixin(Router):
                     cls.__metas__[name] = meta_dict
 
                 elif hasattr(value, '_extra_cache'):
-                    info = value.__dict__.pop('_extra_cache')
+                    info = value.__dict__['_extra_cache']
                     api_info = cls.__columndefaults__.copy()
                     api_info['indexed'] = False
                     api_info.update(info)
@@ -396,7 +396,7 @@ class APIMixin(Router):
                         }
 
                 elif hasattr(value, '_check_cache'):
-                    route_names = value.__dict__.pop('_check_cache')
+                    route_names = value.__dict__['_check_cache']
                     for route_name in route_names:
                         try:
                             cls.__security__[route_name].append(name)
@@ -404,7 +404,7 @@ class APIMixin(Router):
                             cls.__security__[route_name] = [name]
 
                 elif hasattr(value, '_before_cache'):
-                    route_names = value.__dict__.pop('_before_cache')
+                    route_names = value.__dict__['_before_cache']
                     for route_name in route_names:
                         try:
                             cls.__beforereturns__[route_name].append(name)
@@ -412,7 +412,7 @@ class APIMixin(Router):
                             cls.__beforereturns__[route_name] = [name]
 
                 elif hasattr(value, '_adjuster_cache'):
-                    route_names = value.__dict__.pop('_adjuster_cache')
+                    route_names = value.__dict__['_adjuster_cache']
                     for route_name in route_names:
                         try:
                             cls.__adjusters__[route_name].append(name)
@@ -420,12 +420,12 @@ class APIMixin(Router):
                             cls.__adjusters__[route_name] = [name]
 
                 elif hasattr(value, '_setter_cache'):
-                    field_names = value.__dict__.pop('_setter_cache')
+                    field_names = value.__dict__['_setter_cache']
                     for field_name in field_names:
                         cls.__setters__[field_name] = name
 
                 elif hasattr(value, '_getter_cache'):
-                    field_names = value.__dict__.pop('_getter_cache')
+                    field_names = value.__dict__['_getter_cache']
                     for field_name in field_names:
                         cls.__getters__[field_name] = name
 
