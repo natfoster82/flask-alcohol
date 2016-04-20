@@ -616,7 +616,7 @@ class APIMixin(Router):
         if not cls._authorize('index', resource=None):
             return jsonify(messages=api_messages()), 403
         objects, total, has_next = cls._get_results()
-        cls._before_return('index')
+        cls._before_return('index', objects)
         if getattr(g, 'failed_validation', False):
             return jsonify(messages=api_messages()), 400
         return jsonify(results=[x.as_dict() for x in objects],
