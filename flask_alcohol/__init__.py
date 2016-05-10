@@ -468,10 +468,11 @@ class APIMixin(Router):
             if filter_string:
                 column = getattr(cls, field)
                 filter_list = filter_string.split(',')
+                filter_list = [x if x != 'null' else None for x in filter_list]
                 if len(filter_list) > 1:
                     query = query.filter(column.in_(filter_list))
                 else:
-                    query = query.filter(column == filter_string)
+                    query = query.filter(column == filter_list[0])
 
         sort_rules = request.args.get('sort') or cls.__sort__
         if sort_rules:
