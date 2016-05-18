@@ -339,7 +339,7 @@ class APIMixin(Router):
         cls.__metas__ = {}
         cls.__defaultfields__ = set([])
         cls.__indexedfields__ = set([])
-        cls.__relationships__ = set([])
+        cls.__lazyrelationships__ = set([])
 
         # go through all the members of the class and add filters for columns with default filters,
         # setters for all those with a @setter decorator,
@@ -363,9 +363,10 @@ class APIMixin(Router):
                         editable = api_info['set_by'] == 'json'
                     else:
                         # it is a relationship
-                        cls.__relationships__.add(name)
                         api_info = cls.__relationshipdefaults__.copy()
                         api_info.update(value.comparator.info)
+                        if value.comparator.property.lazy == True:
+                            cls.__lazyrelationships__.add(name)
                         indexed = False
                         editable = False
 
@@ -477,7 +478,7 @@ class APIMixin(Router):
     def _get_included_relationships(cls):
         included_fields = cls._get_included_fields()
         included_relationships = []
-        for rel in cls.__relationships__:
+        for rel in cls.__lazyrelationships__:
             if rel in included_fields:
                 included_relationships.append(rel)
         return included_relationships
@@ -590,10 +591,10 @@ class APIMixin(Router):
     def _auto_get(self, name):
         value = getattr(self, name)
         if type(value) == InstrumentedList:
-            value = [x.as_dict(is_related=True) for x in value]
+            value = [x.as_dict(use_defaults=True) for x in value]
         else:
             try:
-                value = value.as_dict(is_related=True)
+                value = value.as_dict(use_defaults=True)
             except AttributeError:
                 pass
         return value
@@ -664,7 +665,7 @@ class APIMixin(Router):
         cls._before_return('index', objects)
         if getattr(g, 'failed_validation', False):
             return jsonify(messages=api_messages()), 400
-        return jsonify(results=[x.as_dict() for x in objects],
+        return jsonify(results=[x.as_dict(use_defaults=False) for x in objects],
                        total=total,
                        has_next=has_next)
 
@@ -679,7 +680,7 @@ class APIMixin(Router):
         cls._before_return('get', obj)
         if getattr(g, 'failed_validation', False):
             return jsonify(messages=api_messages()), 400
-        return jsonify(obj.as_dict())
+        return jsonify(obj.as_dict(use_defaults=False))
 
     @classmethod
     @route('', methods=['POST'], is_auto=True)
@@ -695,7 +696,7 @@ class APIMixin(Router):
         session = cls._get_sql_session()
         session.add(obj)
         session.commit()
-        response = jsonify(obj.as_dict())
+        response = jsonify(obj.as_dict(use_defaults=False))
         response.status_code = 201
         response.headers['Location'] = obj.get_location()
         return response
@@ -716,7 +717,7 @@ class APIMixin(Router):
             return jsonify(messages=api_messages()), 400
         session = cls._get_sql_session()
         session.commit()
-        return jsonify(obj.as_dict())
+        return jsonify(obj.as_dict(use_defaults=False))
 
     @classmethod
     @route('/<identifier>', methods=['DELETE'], is_auto=True)
@@ -742,8 +743,8 @@ class APIMixin(Router):
         cls._before_return('meta')
         return jsonify(cls.__metas__)
 
-    def as_dict(self, is_related=False):
-        if is_related:
+    def as_dict(self, use_defaults=True):
+        if use_defaults:
             # don't listen to the request and only return the default fields
             fields = self.__defaultfields__
         else:
