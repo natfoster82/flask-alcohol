@@ -1,5 +1,5 @@
 from flask import request, jsonify, make_response, current_app, Response, get_flashed_messages, g, flash
-from sqlalchemy.orm import class_mapper
+from sqlalchemy.orm import class_mapper, joinedload
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.properties import ColumnProperty
 from sqlalchemy.orm.collections import InstrumentedList
@@ -339,6 +339,7 @@ class APIMixin(Router):
         cls.__metas__ = {}
         cls.__defaultfields__ = set([])
         cls.__indexedfields__ = set([])
+        cls.__relationships__ = set([])
 
         # go through all the members of the class and add filters for columns with default filters,
         # setters for all those with a @setter decorator,
@@ -362,6 +363,7 @@ class APIMixin(Router):
                         editable = api_info['set_by'] == 'json'
                     else:
                         # it is a relationship
+                        cls.__relationships__.add(name)
                         api_info = cls.__relationshipdefaults__.copy()
                         api_info.update(value.comparator.info)
                         indexed = False
@@ -450,6 +452,47 @@ class APIMixin(Router):
             return 'checkbox'
 
     @classmethod
+    def _get_included_fields(cls):
+        try:
+            fields = g.cached_included_fields
+        except AttributeError:
+            only_fields = request.args.get('only')
+            if only_fields:
+                fields = set([x for x in only_fields.split(',') if x in cls.__infos__])
+            else:
+                fields = cls.__defaultfields__
+                include_fields = request.args.get('include')
+                if include_fields:
+                    include_fields = set([x for x in include_fields.split(',') if x in cls.__infos__])
+                    fields = fields | include_fields
+
+                defer_fields = request.args.get('defer')
+                if defer_fields:
+                    defer_fields = set(defer_fields.split(','))
+                    fields = fields - defer_fields
+            g.cached_included_fields = fields
+        return fields
+
+    @classmethod
+    def _get_included_relationships(cls):
+        included_fields = cls._get_included_fields()
+        included_relationships = []
+        for rel in cls.__relationships__:
+            if rel in included_fields:
+                included_relationships.append(rel)
+        return included_relationships
+
+    @classmethod
+    def _joinedload_query(cls, query):
+        jloads = []
+        for rel in cls._get_included_relationships():
+            jload = joinedload(rel)
+            jloads.append(jload)
+        if jloads:
+            return query.options(*jloads)
+        return query
+
+    @classmethod
     def _get_api_info(cls, name):
         return cls.__infos__[name]
 
@@ -457,6 +500,7 @@ class APIMixin(Router):
     def _get_obj_by_id(cls, identifier, route):
         id_col = getattr(cls, cls.__idattr__)
         query = cls.query.filter(id_col == identifier)
+        query = cls._joinedload_query(query)
         query = cls._adjust_query(query, route)
         return query.first()
 
@@ -501,7 +545,7 @@ class APIMixin(Router):
             return jsonify(messages=api_messages()), 400
 
         # adjust the query further before pagination
-        # do i want to joinedload included relationships?
+        query = cls._joinedload_query(query)
         query = cls._adjust_query(query, route)
 
         if per_page is None:
@@ -703,20 +747,7 @@ class APIMixin(Router):
             # don't listen to the request and only return the default fields
             fields = self.__defaultfields__
         else:
-            only_fields = request.args.get('only')
-            if only_fields:
-                fields = set([x for x in only_fields.split(',') if x in self.__infos__])
-            else:
-                fields = self.__defaultfields__
-                include_fields = request.args.get('include')
-                if include_fields:
-                    include_fields = set([x for x in include_fields.split(',') if x in self.__infos__])
-                    fields = fields | include_fields
-
-                defer_fields = request.args.get('defer')
-                if defer_fields:
-                    defer_fields = set(defer_fields.split(','))
-                    fields = fields - defer_fields
+            fields = self.__class__._get_included_fields()
 
         result_dict = {}
         for field in fields:
