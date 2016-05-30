@@ -454,9 +454,11 @@ class APIMixin(Router):
 
     @classmethod
     def _get_included_fields(cls):
+        if not hasattr(g, 'cached_included_fields'):
+            g.cached_included_fields = {}
         try:
-            fields = g.cached_included_fields
-        except AttributeError:
+            fields = g.cached_included_fields[cls.__name__]
+        except KeyError:
             only_fields = request.args.get('only')
             if only_fields:
                 fields = set([x for x in only_fields.split(',') if x in cls.__infos__])
@@ -471,7 +473,7 @@ class APIMixin(Router):
                 if defer_fields:
                     defer_fields = set(defer_fields.split(','))
                     fields = fields - defer_fields
-            g.cached_included_fields = fields
+            g.cached_included_fields[cls.__name__] = fields
         return fields
 
     @classmethod
