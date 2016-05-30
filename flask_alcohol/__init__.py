@@ -454,8 +454,6 @@ class APIMixin(Router):
 
     @classmethod
     def _get_included_fields(cls):
-        if not hasattr(g, 'cached_included_fields'):
-            g.cached_included_fields = {}
         try:
             fields = g.cached_included_fields[cls.__name__]
         except KeyError:
@@ -657,15 +655,22 @@ class APIMixin(Router):
         return current_app.extensions['sqlalchemy'].db.session
 
     @classmethod
+    def set_g(cls):
+        g.fields = request.json or request.form
+        g.failed_validation = False
+        g.cached_included_fields = {}
+
+    @classmethod
     @route('', is_auto=True)
     def index(cls, **kwargs):
+        cls.set_g()
         # this kwargs stuff is there for when there are arguments in the prefix or base.
         # how did flask-classy solve this?
         if not cls._authorize('index', resource=None):
             return jsonify(messages=api_messages()), 403
         objects, total, has_next = cls._get_results()
         cls._before_return('index', objects)
-        if getattr(g, 'failed_validation', False):
+        if g.failed_validation:
             return jsonify(messages=api_messages()), 400
         return jsonify(results=[x.as_dict(use_defaults=False) for x in objects],
                        total=total,
@@ -674,26 +679,27 @@ class APIMixin(Router):
     @classmethod
     @route('/<identifier>', is_auto=True)
     def get(cls, **kwargs):
+        cls.set_g()
         obj = cls._get_obj_by_id(kwargs['identifier'], 'get')
         if obj is None:
             return jsonify(messages=api_messages()), 404
         if not cls._authorize('get', resource=obj):
             return jsonify(messages=api_messages()), 403
         cls._before_return('get', obj)
-        if getattr(g, 'failed_validation', False):
+        if g.failed_validation:
             return jsonify(messages=api_messages()), 400
         return jsonify(obj.as_dict(use_defaults=False))
 
     @classmethod
     @route('', methods=['POST'], is_auto=True)
     def post(cls, **kwargs):
-        g.fields = request.json or request.form
+        cls.set_g()
         if not cls._authorize('post', resource=None):
             return jsonify(messages=api_messages()), 403
         obj = cls()
         obj._auto_update()
         cls._before_return('post', obj)
-        if getattr(g, 'failed_validation', False):
+        if g.failed_validation:
             return jsonify(messages=api_messages()), 400
         session = cls._get_sql_session()
         session.add(obj)
@@ -706,8 +712,8 @@ class APIMixin(Router):
     @classmethod
     @route('/<identifier>', methods=['PUT'], is_auto=True)
     def put(cls, **kwargs):
+        cls.set_g()
         # pragmatic put method that does not require the whole object to be sent back
-        g.fields = request.json or request.form
         obj = cls._get_obj_by_id(kwargs['identifier'], 'put')
         if obj is None:
             return jsonify(messages=api_messages()), 404
@@ -715,7 +721,7 @@ class APIMixin(Router):
             return jsonify(messages=api_messages()), 403
         obj._auto_update()
         cls._before_return('put', obj)
-        if getattr(g, 'failed_validation', False):
+        if g.failed_validation:
             return jsonify(messages=api_messages()), 400
         session = cls._get_sql_session()
         session.commit()
@@ -730,7 +736,7 @@ class APIMixin(Router):
         if not cls._authorize('delete', resource=obj):
             return jsonify(messages=api_messages()), 403
         cls._before_return('delete', obj)
-        if getattr(g, 'failed_validation', False):
+        if g.failed_validation:
             return jsonify(messages=api_messages()), 400
         session = cls._get_sql_session()
         session.delete(obj)
