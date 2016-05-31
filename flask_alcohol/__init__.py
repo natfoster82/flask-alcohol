@@ -730,6 +730,7 @@ class APIMixin(Router):
     @classmethod
     @route('/<identifier>', methods=['DELETE'], is_auto=True)
     def delete(cls, **kwargs):
+        cls.set_g()
         obj = cls._get_obj_by_id(kwargs['identifier'], 'delete')
         if obj is None:
             return jsonify(messages=api_messages()), 404
