@@ -6,7 +6,7 @@ setup(name='flask_alcohol',
       url='',
       author='Nat Foster',
       author_email='nat.foster@gmail.com',
-      license='MIT',
+      license='BSD',
       packages=['flask_alcohol'],
       install_requires=[
           'flask_sqlalchemy',

@@ -1,3 +1,15 @@
+"""
+    Flask-Alcohol
+    --------------
+    Automatically generate API routes from Flask-SQLAlchemy models.
+    :copyright: (c) 2016 by Nat Foster.
+    :copyright: (c) 2013 by Freedom Dumlao.
+    :license: BSD, see LICENSE for more details.
+"""
+
+__version__ = '0.1'
+
+
 from flask import request, jsonify, make_response, current_app, Response, get_flashed_messages, g, flash
 from sqlalchemy.orm import class_mapper, joinedload
 from sqlalchemy.orm.attributes import InstrumentedAttribute
