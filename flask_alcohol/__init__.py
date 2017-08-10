@@ -7,7 +7,7 @@
     :license: BSD, see LICENSE for more details.
 """
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 
 from flask import request, jsonify, make_response, current_app, Response, get_flashed_messages, g, flash
@@ -145,7 +145,6 @@ class Router(object):
     __decorators__ = []
     __routebase__ = None
     __routeprefix__ = None
-    __docstrings__ = {}
 
     # methods modified from Flask-Classy
     @classmethod
@@ -224,9 +223,6 @@ class Router(object):
         if cls.__decorators__:
             for decorator in cls.__decorators__:
                 view = decorator(view)
-
-        if name in cls.__docstrings__:
-            view.__func__.__doc__ = cls.__docstrings__[name]
 
         @functools.wraps(view)
         def proxy(**forgettable_view_args):
