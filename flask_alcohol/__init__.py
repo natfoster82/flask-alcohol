@@ -145,6 +145,7 @@ class Router(object):
     __decorators__ = []
     __routebase__ = None
     __routeprefix__ = None
+    __docstrings__ = {}
 
     # methods modified from Flask-Classy
     @classmethod
@@ -224,6 +225,9 @@ class Router(object):
             for decorator in cls.__decorators__:
                 view = decorator(view)
 
+        if name in cls.__docstrings__:
+            view.__doc__ = cls.__docstrings__[name]
+
         @functools.wraps(view)
         def proxy(**forgettable_view_args):
             # Always use the global request object's view_args, because they
@@ -251,7 +255,7 @@ class Router(object):
         """
 
         rule_parts = []
-        route_prefix = cls.__routeprefix__ or prefix
+        route_prefix = cls.__routeprefix__ if cls.__routeprefix__ is not None else prefix
         if route_prefix:
             rule_parts.append(route_prefix)
 
@@ -263,7 +267,9 @@ class Router(object):
 
         result = "/%s" % "/".join(rule_parts)
         rule = re.sub(r'(/)\1+', r'\1', result)
-        return rule.rstrip('/')
+        if len(rule) > 1:
+            rule = rule.rstrip('/')
+        return rule
 
     @classmethod
     def get_route_base(cls):
