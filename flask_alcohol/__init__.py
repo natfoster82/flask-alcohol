@@ -334,7 +334,7 @@ class APIMixin(Router):
         """
 
         if cls in (Router, APIMixin):
-            raise TypeError("cls must be a subclass of RoutingBase or APIMixin, not one of the base classes themselves")
+            raise TypeError("cls must be a subclass of Router or APIMixin, not one of the base classes themselves")
 
         if not subdomain:
             if hasattr(app, "subdomain") and app.subdomain is not None:
@@ -787,6 +787,10 @@ class APIMixin(Router):
 
     def get_location(self):
         return '/api/url/goes/here'
+
+
+class AutorouteMixin():
+    pass
 
 
 class UserRouteMixin(Router):
